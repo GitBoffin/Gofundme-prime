@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prime GoFundMe — Admin Panel</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    :root {
+      --bg: #0a0f0a; --panel: #0f1a0f; --border: #1a2e1a;
+      --accent: #00ff88; --accent2: #00cc66; --text: #e8f5e8;
+      --muted: #4a7a4a; --danger: #ff4444; --warning: #ffaa00; --card: #111d11;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px; pointer-events: none; z-index: 0;
+    }
+    .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+    .logo-title { font-size: 20px; font-weight: 800; color: var(--accent); }
+    .logo-sub { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; text-transform: uppercase; }
+    .status-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,255,136,0.4)} 50%{opacity:0.7;box-shadow:0 0 0 6px rgba(0,255,136,0)} }
+
+    .sync-banner {
+      background: linear-gradient(135deg, #001a0a, #002211); border: 1px solid var(--accent2);
+      border-radius: 12px; padding: 14px 18px; margin-bottom: 24px;
+      display: flex; align-items: center; gap: 12px; font-size: 13px;
+    }
+    .sync-text { color: var(--accent); font-weight: 600; }
+    .sync-sub { color: var(--muted); font-size: 11px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+    /* Setup panel */
+    .setup-panel {
+      background: linear-gradient(135deg, #1a1000, #0d1a00);
+      border: 2px solid var(--warning);
+      border-radius: 16px; padding: 24px; margin-bottom: 24px;
+    }
+    .setup-title { font-size: 16px; font-weight: 800; color: var(--warning); margin-bottom: 8px; }
+    .setup-sub { font-size: 12px; color: #cc8800; margin-bottom: 16px; line-height: 1.6; }
+    .setup-steps { font-size: 12px; color: #aa7700; line-height: 2; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; }
+    .setup-steps strong { color: var(--warning); }
+    .setup-input-row { display: flex; gap: 8px; }
+    .setup-input {
+      flex: 1; background: #0a0a00; border: 1px solid #665500; color: var(--text);
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 10px 14px;
+      border-radius: 8px; outline: none;
+    }
+    .setup-input:focus { border-color: var(--warning); }
+    .setup-btn {
+      background: var(--warning); color: #000; border: none; font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 700; padding: 10px 20px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+    }
+    .setup-btn:hover { background: #ffbb22; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-num { font-size: 32px; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+
+    .gen-panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+    .gen-title { font-size: 14px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .gen-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .qty-select, .val-select {
+      background: var(--panel); border: 1px solid var(--border); color: var(--text);
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 10px 14px; border-radius: 8px; outline: none; cursor: pointer;
+    }
+    .gen-btn {
+      background: var(--accent); color: #000; border: none; font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 700; padding: 10px 24px; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s; flex: 1; min-width: 160px;
+    }
+    .gen-btn:hover { background: var(--accent2); }
+    .gen-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+    .copy-all-btn {
+      background: transparent; border: 1px solid var(--accent); color: var(--accent);
+      font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 10px 20px;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .copy-all-btn:hover { background: rgba(0,255,136,0.1); }
+
+    .status-msg {
+      margin-top: 12px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+      padding: 8px 12px; border-radius: 6px; display: none; white-space: pre-wrap;
+    }
+    .status-msg.show { display: block; }
+    .status-msg.success { background: rgba(0,255,136,0.1); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); }
+    .status-msg.error { background: rgba(255,68,68,0.1); color: var(--danger); border: 1px solid rgba(255,68,68,0.3); }
+    .status-msg.loading { background: rgba(255,170,0,0.1); color: var(--warning); border: 1px solid rgba(255,170,0,0.3); }
+
+    .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .search-box {
+      flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 10px 14px; border-radius: 8px; outline: none;
+    }
+    .search-box:focus { border-color: var(--accent); }
+    .filter-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
+      padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.08); }
+
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .table-head {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 80px;
+      padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+      font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
+    }
+    .code-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 80px;
+      padding: 13px 16px; border-bottom: 1px solid var(--border); align-items: center;
+    }
+    .code-row:last-child { border-bottom: none; }
+    .code-row:hover { background: rgba(0,255,136,0.03); }
+    .code-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+    .val-text { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .badge-active { background: rgba(0,255,136,0.15); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); }
+    .badge-used { background: rgba(255,68,68,0.12); color: var(--danger); border: 1px solid rgba(255,68,68,0.25); }
+    .copy-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 4px 10px;
+      border-radius: 6px; cursor: pointer; transition: all 0.2s;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.1); }
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,170,0,0.3); border-top-color: var(--warning); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .db-url-display {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent);
+      background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 6px; padding: 6px 10px; margin-top: 10px; word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div>
+      <div class="logo-title">⚡ Prime Admin</div>
+      <div class="logo-sub">GoFundMe Code Manager</div>
+    </div>
+    <div class="status-dot"><div class="dot"></div><span id="conn-label">CONNECTING...</span></div>
+  </div>
+
+  <!-- Firebase Setup Panel -->
+  <div class="setup-panel" id="setup-panel">
+    <div class="setup-title">🔥 One-Time Firebase Setup Required</div>
+    <div class="setup-sub">
+      You need a free Firebase database so codes work on <strong>any browser, any domain</strong>.<br>
+      This takes 2 minutes. Do it once, works forever.
+    </div>
+    <div class="setup-steps">
+      <strong>Step 1:</strong> Go to <strong>console.firebase.google.com</strong> → Create project (free)<br>
+      <strong>Step 2:</strong> Click "Realtime Database" → Create database → Start in <strong>test mode</strong><br>
+      <strong>Step 3:</strong> Copy your database URL (looks like: <strong>https://your-app-default-rtdb.firebaseio.com</strong>)<br>
+      <strong>Step 4:</strong> Paste it below and click Save
+    </div>
+    <div class="setup-input-row">
+      <input class="setup-input" id="fb-url-input" placeholder="https://your-app-default-rtdb.firebaseio.com" />
+      <button class="setup-btn" onclick="saveFirebaseUrl()">Save &amp; Connect</button>
+    </div>
+    <div id="setup-msg" style="font-size:12px;margin-top:8px;color:var(--muted);font-family:'JetBrains Mono',monospace;"></div>
+  </div>
+
+  <div class="sync-banner" id="sync-banner" style="display:none">
+    <div style="font-size:22px">🔥</div>
+    <div>
+      <div class="sync-text">Firebase Connected — Works on ALL Browsers &amp; Domains</div>
+      <div class="sync-sub" id="fb-url-display">Loading...</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total Codes</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-active" style="color:#00ff88">—</div><div class="stat-label">Active</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-used" style="color:#ff4444">—</div><div class="stat-label">Used</div></div>
+  </div>
+
+  <div class="gen-panel">
+    <div class="gen-title">⚡ Generate New Codes</div>
+    <div class="gen-controls">
+      <select class="qty-select" id="qty-select">
+        <option value="1">1 code</option>
+        <option value="3">3 codes</option>
+        <option value="5" selected>5 codes</option>
+        <option value="10">10 codes</option>
+        <option value="20">20 codes</option>
+      </select>
+      <select class="val-select" id="val-select">
+        <option value="0">Random value</option>
+        <option value="60000">$60,000</option>
+        <option value="65000">$65,000</option>
+        <option value="70000">$70,000</option>
+        <option value="75000">$75,000</option>
+        <option value="80000">$80,000</option>
+        <option value="85000">$85,000</option>
+        <option value="90000">$90,000</option>
+        <option value="95000">$95,000</option>
+        <option value="99500">$99,500</option>
+      </select>
+      <button class="gen-btn" id="gen-btn" onclick="generateCodes()">Generate Codes</button>
+      <button class="copy-all-btn" onclick="copyAll()">Copy All Active</button>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+  </div>
+
+  <div class="search-row">
+    <input class="search-box" id="search-box" placeholder="Search codes..." oninput="renderTable()" />
+    <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All</button>
+    <button class="filter-btn" id="filter-active" onclick="setFilter('active')">Active</button>
+    <button class="filter-btn" id="filter-used" onclick="setFilter('used')">Used</button>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-head"><span>Code</span><span>Value</span><span>Status</span><span>Copy</span></div>
+    <div id="codes-list">
+      <div class="empty-state">⏳ Waiting for Firebase connection...</div>
+    </div>
+  </div>
+
+</div>
+<script>
+  // ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
+  // Firebase URL is saved in localStorage on THIS device (admin only).
+  // The GoFundMe site needs the SAME URL hardcoded — see instructions below.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  let FB_URL = localStorage.getItem('prime_fb_url') || 'https://gofundme-45a8c-default-rtdb.firebaseio.com';
+  let currentFilter = 'all';
+  let allCodes = [];
+
+  // ── On load ──
+  window.onload = () => {
+    // Firebase URL is hardcoded — connect immediately
+    showConnected(FB_URL);
+    loadAndRender();
+  };
+
+  // ── Save Firebase URL ──
+  function saveFirebaseUrl() {
+    let url = document.getElementById('fb-url-input').value.trim().replace(/\/$/, '');
+    if (!url.startsWith('https://') || !url.includes('firebaseio.com')) {
+      document.getElementById('setup-msg').textContent = '❌ Invalid URL. Must be https://....firebaseio.com';
+      document.getElementById('setup-msg').style.color = '#ff4444';
+      return;
+    }
+    document.getElementById('setup-msg').textContent = '⏳ Testing connection...';
+    document.getElementById('setup-msg').style.color = '#ffaa00';
+
+    fetch(`${url}/codes.json`)
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        localStorage.setItem('prime_fb_url', url);
+        FB_URL = url;
+        showConnected(url);
+        loadAndRender();
+
+        // Show instructions for updating the GoFundMe site
+        document.getElementById('setup-msg').innerHTML =
+          `✅ Connected! Now update your GoFundMe site:<br>
+           Open <strong>index.html</strong> and change the line:<br>
+           <code style="background:#111;padding:2px 6px;border-radius:4px;color:#00ff88">const FB_URL = 'https://prime-gofundme-default-rtdb.firebaseio.com';</code><br>
+           to use YOUR URL: <code style="background:#111;padding:2px 6px;border-radius:4px;color:#ffaa00">${url}</code>`;
+        document.getElementById('setup-msg').style.color = '#00ff88';
+      })
+      .catch(e => {
+        document.getElementById('setup-msg').textContent = '❌ Could not connect. Check URL and make sure database is in Test Mode.';
+        document.getElementById('setup-msg').style.color = '#ff4444';
+      });
+  }
+
+  function showConnected(url) {
+    document.getElementById('setup-panel').style.display = 'none';
+    document.getElementById('sync-banner').style.display = 'flex';
+    document.getElementById('fb-url-display').textContent = url;
+    document.getElementById('conn-label').textContent = 'FIREBASE LIVE';
+  }
+
+  // ── Firebase helpers ──
+  async function fbGet(path) {
+    const r = await fetch(`${FB_URL}/${path}.json`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  async function fbSet(path, data) {
+    const r = await fetch(`${FB_URL}/${path}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  async function fbPatch(path, data) {
+    const r = await fetch(`${FB_URL}/${path}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  // ── Load all codes from Firebase ──
+  async function loadCodes() {
+    const data = await fbGet('codes');
+    if (!data) return [];
+    return Object.entries(data).map(([key, val]) => ({ ...val, _key: key }));
+  }
+
+  // ── Helpers ──
+  function randomSuffix() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+
+  function randValue(fixed) {
+    if (fixed && fixed > 0) return fixed;
+    const vals = [60000,62500,65000,67000,68500,70000,72000,74500,77000,80000,82000,85000,87000,90000,92000,95000,97000,99500];
+    return vals[Math.floor(Math.random() * vals.length)];
+  }
+
+  // ── Generate codes ──
+  async function generateCodes() {
+    if (!FB_URL) { showMsg('error', '❌ Connect Firebase first!'); return; }
+    const btn = document.getElementById('gen-btn');
+    const qty = parseInt(document.getElementById('qty-select').value);
+    const fixedVal = parseInt(document.getElementById('val-select').value);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving to Firebase...';
+    showMsg('loading', '⏳ Generating codes and saving to Firebase...');
+
+    try {
+      const existing = await fbGet('codes') || {};
+      const existingKeys = new Set(Object.keys(existing));
+      const newCodes = {};
+      const generated = [];
+
+      for (let i = 0; i < qty; i++) {
+        let suffix, key, attempts = 0;
+        do { suffix = randomSuffix(); key = `PRIME-GOFUND-${suffix}`; attempts++; }
+        while (existingKeys.has(key) && attempts < 100);
+        existingKeys.add(key);
+        newCodes[key] = {
+          code: key,
+          value: randValue(fixedVal),
+          status: 'active',
+          usedBy: '',
+          adminGenerated: true,
+          generatedAt: new Date().toISOString()
+        };
+        generated.push(key);
+      }
+
+      await fbPatch('codes', newCodes);
+      await loadAndRender();
+      showMsg('success', `✅ ${qty} code(s) saved to Firebase!\nWorks on ALL browsers & domains now.\n\n${generated.join('\n')}`);
+    } catch(e) {
+      showMsg('error', '❌ Firebase error: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Generate Codes';
+  }
+
+  // ── Load and render ──
+  async function loadAndRender() {
+    try {
+      allCodes = await loadCodes();
+      updateStats(allCodes);
+      renderTable();
+    } catch(e) {
+      showMsg('error', '❌ Failed to load: ' + e.message);
+    }
+  }
+
+  function updateStats(codes) {
+    document.getElementById('stat-total').textContent = codes.length;
+    document.getElementById('stat-active').textContent = codes.filter(c => c.status === 'active').length;
+    document.getElementById('stat-used').textContent = codes.filter(c => c.status === 'used').length;
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    ['all','active','used'].forEach(id => document.getElementById(`filter-${id}`).classList.toggle('active', id === f));
+    renderTable();
+  }
+
+  function renderTable() {
+    const search = (document.getElementById('search-box').value || '').toUpperCase();
+    let filtered = allCodes.filter(c => {
+      const matchSearch = (c.code||'').includes(search) || (c.usedBy||'').toUpperCase().includes(search);
+      const matchFilter = currentFilter === 'all' || c.status === currentFilter;
+      return matchSearch && matchFilter;
+    });
+    const list = document.getElementById('codes-list');
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty-state">${allCodes.length === 0 ? '📭 No codes yet — generate some above!' : '📭 No codes match your filter.'}</div>`;
+      return;
+    }
+    filtered.sort((a, b) => {
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (a.status !== 'active' && b.status === 'active') return 1;
+      return new Date(b.generatedAt||0) - new Date(a.generatedAt||0);
+    });
+    list.innerHTML = filtered.map(c => `
+      <div class="code-row">
+        <span class="code-text">${c.code}</span>
+        <span class="val-text">$${Number(c.value).toLocaleString()}</span>
+        <span>
+          <span class="status-badge ${c.status === 'active' ? 'badge-active' : 'badge-used'}">${c.status === 'used' ? '🔴 USED' : '🟢 ACTIVE'}</span>
+          ${c.usedBy ? `<div style="font-size:9px;color:#4a7a4a;margin-top:3px;font-family:'JetBrains Mono',monospace">${c.usedBy}</div>` : ''}
+        </span>
+        <button class="copy-btn" onclick="copyCode('${c.code}', this)">COPY</button>
+      </div>
+    `).join('');
+  }
+
+  function copyCode(code, btn) {
+    fallbackCopy(code);
+    btn.textContent = '✓ DONE';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+  }
+
+  function copyAll() {
+    const active = allCodes.filter(c => c.status === 'active').map(c => c.code);
+    if (!active.length) { showMsg('error', '❌ No active codes.'); return; }
+    fallbackCopy(active.join('\n'));
+    showMsg('success', `✅ Copied ${active.length} active codes!`);
+    setTimeout(() => { document.getElementById('status-msg').className = 'status-msg'; }, 3000);
+  }
+
+  function fallbackCopy(text) {
+    try { if (navigator.clipboard) { navigator.clipboard.writeText(text); return; } } catch(e) {}
+    const ta = Object.assign(document.createElement('textarea'), { value: text });
+    ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('status-msg');
+    el.className = 'status-msg show ' + type;
+    el.textContent = text;
+  }
+
+  // Auto-refresh every 15s
+  setInterval(() => { if (FB_URL) loadAndRender(); }, 15000);
+</script>
+</body>
+</html>
